@@ -1,0 +1,12 @@
+package reminder.reminderbe.domain.user.exception;
+
+import reminder.reminderbe.global.error.CustomException;
+import reminder.reminderbe.global.error.ErrorCode;
+
+public class NicknameAlreadyExistsException extends CustomException {
+    public static final CustomException EXCEPTION = new NicknameAlreadyExistsException();
+
+    private NicknameAlreadyExistsException(){
+        super(ErrorCode.NICKNAME_ALREADY_EXISTS);
+    }
+}
