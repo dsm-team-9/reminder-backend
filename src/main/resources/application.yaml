@@ -1,0 +1,31 @@
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${URL}
+    username: ${NAME}
+    password: ${PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+    database: mysql
+
+
+  cache:
+    type: simple
+
+jwt:
+  key: ${JWT_SECRET_KEY:rkGU45258GGhiolLO2465TFY5345kGU45258GGhiolLO2465TFY5345}
+  accessExp: ${JWT_ACCESS_EXP:4000000000}
+
+gemini:
+  api:
+    key: ${KEY}

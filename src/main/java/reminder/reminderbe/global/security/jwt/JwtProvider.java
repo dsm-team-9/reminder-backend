@@ -29,11 +29,11 @@ public class JwtProvider {
 
     private final AuthDetailsService authDetailsService;
 
-    @Value("${spring.jwt.key}")
+    @Value("${jwt.key}")
     private String key;
 
     // spring.jwt.live.accessToken 프로퍼티의 값을 주입
-    @Value("${spring.jwt.live.accessToken}")
+    @Value("${jwt.accessExp}")
     private Long accessTokenTime;
 
     @PostConstruct
