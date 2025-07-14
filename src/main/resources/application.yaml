@@ -29,3 +29,9 @@ jwt:
 gemini:
   api:
     key: ${KEY}
+
+aws:
+  bucket: ${bucket}
+  accessKey: ${accessKey}
+  secretKey: ${secretKey}
+  static: ${static}

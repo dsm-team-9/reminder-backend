@@ -15,7 +15,7 @@ import java.util.UUID;
 @Component
 public class S3Facade implements ImageUtil {
 
-    @Value("${spring.cloud.aws.s3.bucket}")
+    @Value("${aws.bucket}")
     private String bucketName;
     private final AmazonS3 amazonS3;
 
