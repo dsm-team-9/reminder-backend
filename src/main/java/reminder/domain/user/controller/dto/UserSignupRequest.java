@@ -1,8 +1,10 @@
 package reminder.domain.user.controller.dto;
 
-public record UserSignupRequest(
-        String name,
-        String phoneNumber,
-        String password
-) {
+import lombok.Getter;
+
+@Getter
+public class UserSignupRequest{
+        private String name;
+        private String phoneNumber;
+        private String password;
 }
