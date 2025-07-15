@@ -19,6 +19,7 @@ spring:
     database: mysql
 
 
+
   cache:
     type: simple
 
@@ -35,3 +36,6 @@ aws:
   accessKey: ${accessKey}
   secretKey: ${secretKey}
   static: ${static}
+server:
+  servlet:
+    context-path: /reminder
