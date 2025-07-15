@@ -26,4 +26,16 @@ public class ErrorResponseEntity {
                         .build()
                 );
     }
+
+    public static ResponseEntity<ErrorResponseEntity> responseEntity(ErrorCode errorCode, String customMessage) {
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(ErrorResponseEntity.builder()
+                        .status(errorCode.getHttpStatus())
+                        .code(errorCode.name())
+                        .message(customMessage)
+                        .createLocalDateTime(LocalDateTime.now())
+                        .build()
+                );
+    }
 }

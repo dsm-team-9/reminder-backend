@@ -7,6 +7,9 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ErrorCode {
 
+    INVALID_INPUT(400, "Invalid Input"),
+    INTERNAL_SERVER_ERROR(500, "Internal Server Error"),
+
     USER_NOT_FOUND(404, "User Not Found"),
     ACCOUNTID_ALREADY_EXISTS(409, "PhoneNumber Already Exists"),
     NICKNAME_ALREADY_EXISTS(409, "Nickname Already Exists"),
