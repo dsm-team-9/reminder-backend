@@ -19,17 +19,17 @@ public class UserSignupService {
     private final PasswordEncoder passwordEncoder;
 
     public void execute(UserSignupRequest request) {
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+        if (userRepository.existsByPhoneNumber(request.phoneNumber())) {
             throw PhoneNumberAlreadyExistsException.EXCEPTION;
         }
-        if (userRepository.existsByName(request.getName())) {
+        if (userRepository.existsByName(request.name())) {
             throw NicknameAlreadyExistsException.EXCEPTION;
         }
 
         User user = User.builder()
-                .name(request.getName())
-                .phoneNumber(request.getPhoneNumber())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .name(request.name())
+                .phoneNumber(request.phoneNumber())
+                .password(passwordEncoder.encode(request.password()))
                 .build();
 
         userRepository.save(user);

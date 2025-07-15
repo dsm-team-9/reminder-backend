@@ -7,7 +7,7 @@ public class PasswordMissMatchException extends CustomException {
 
     public static final CustomException EXCEPTION = new PasswordMissMatchException();
 
-    private PasswordMissMatchException(){
+    public PasswordMissMatchException(){
         super(ErrorCode.PASSWORD_MISS_MATCH);
     }
 
