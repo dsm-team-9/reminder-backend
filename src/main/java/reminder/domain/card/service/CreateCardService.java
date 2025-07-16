@@ -1,46 +1,26 @@
 package reminder.domain.card.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import reminder.domain.card.domain.Card;
-import reminder.domain.card.domain.repository.CardRepository;
-import reminder.domain.card.controller.dto.CardCreateRequest;
-import reminder.domain.user.facade.UserFacade;
-import reminder.infra.S3Facade;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.*;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.core.io.ByteArrayResource;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.Map;
-import java.util.UUID;
-import reminder.domain.user.entity.User;
-import reminder.domain.user.entity.repository.UserRepository;
-import reminder.domain.user.exception.UserNotFoundException;
-import reminder.domain.user.facade.UserFacade;
-
-
-import reminder.domain.museum.domain.repository.MuseumRepository;
-import reminder.domain.museum.domain.Museum;
-
-import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.web.client.RestTemplate;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.HttpEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+import reminder.domain.card.controller.dto.CardCreateRequest;
+import reminder.domain.card.domain.Card;
+import reminder.domain.card.domain.repository.CardRepository;
+import reminder.domain.museum.domain.Museum;
+import reminder.domain.museum.domain.repository.MuseumRepository;
+import reminder.domain.user.entity.User;
+import reminder.domain.user.facade.UserFacade;
+import reminder.infra.S3Facade;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.URLConnection;
 
 @Service
 @Slf4j
@@ -61,14 +41,11 @@ public class CreateCardService {
     @Value("${google.search.cx}")
     private String googleSearchCx;
 
-    
-
     public Card createCard(CardCreateRequest request) {
         User user = userFacade.getCurrentUser();
         Museum museum = museumRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalArgumentException("Museum not found for current user."));
 
-        // 1. Use Google Custom Search API to find an image
         String imageUrl = "";
         try {
             String searchQuery = request.getTitle() + " image";
@@ -87,14 +64,29 @@ public class CreateCardService {
                     String foundImageUrl = items.get(0).path("link").asText();
                     log.info("Found image URL from Google Search: {}", foundImageUrl);
 
-                    // Download the image
                     ResponseEntity<byte[]> imageDownloadResponse = restTemplate.getForEntity(foundImageUrl, byte[].class);
 
                     if (imageDownloadResponse.getStatusCode().is2xxSuccessful() && imageDownloadResponse.getBody() != null) {
                         byte[] imageBytes = imageDownloadResponse.getBody();
-                        log.info("Image downloaded successfully. Size: {} bytes", imageBytes.length);
-                        MultipartFile multipartFile = new ByteArrayMultipartFile(imageBytes, "image.jpeg", "image/jpeg");
+
+                        // Guess content-type from stream
+                        String contentType = URLConnection.guessContentTypeFromStream(new ByteArrayInputStream(imageBytes));
+
+                        // Fallback to file extension if detection fails or is invalid
+                        if (contentType == null || !contentType.startsWith("image/")) {
+                            String lowerUrl = foundImageUrl.toLowerCase();
+                            if (lowerUrl.endsWith(".webp")) contentType = "image/webp";
+                            else if (lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg")) contentType = "image/jpeg";
+                            else if (lowerUrl.endsWith(".png")) contentType = "image/png";
+                            else contentType = "image/jpeg"; // default fallback
+                        }
+
+                        String extension = contentType.substring(contentType.lastIndexOf("/") + 1);
+                        String filename = "image." + extension;
+
+                        MultipartFile multipartFile = new ByteArrayMultipartFile(imageBytes, filename, contentType);
                         imageUrl = s3Facade.uploadImage(multipartFile);
+
                         log.info("Image uploaded to S3. URL: {}", imageUrl);
                     } else {
                         log.warn("Failed to download image from {}. Status: {}", foundImageUrl, imageDownloadResponse.getStatusCode());
@@ -105,12 +97,13 @@ public class CreateCardService {
                     imageUrl = "default_image_url_if_no_image_found";
                 }
             } else {
-                log.warn("Google Custom Search API call failed. Status: {}, Body is null: {}", searchResponse.getStatusCode(), searchResponse.getBody() == null);
+                log.warn("Google Custom Search API failed. Status: {}, Body null: {}", searchResponse.getStatusCode(), searchResponse.getBody() == null);
                 imageUrl = "default_image_url_if_search_fails";
             }
+
         } catch (Exception e) {
             log.error("Error during Google Custom Search API call, image download, or S3 upload: {}", e.getMessage(), e);
-            imageUrl = "default_image_url_if_exception"; // Fallback
+            imageUrl = "default_image_url_if_exception";
         }
 
         Card card = Card.builder()
@@ -125,7 +118,6 @@ public class CreateCardService {
         return cardRepository.save(card);
     }
 
-    // Helper class to convert byte[] to MultipartFile
     private static class ByteArrayMultipartFile implements MultipartFile {
         private final byte[] bytes;
         private final String name;
@@ -134,49 +126,18 @@ public class CreateCardService {
 
         public ByteArrayMultipartFile(byte[] bytes, String originalFilename, String contentType) {
             this.bytes = bytes;
-            this.name = "file"; // Default name
+            this.name = "file";
             this.originalFilename = originalFilename;
             this.contentType = contentType;
         }
 
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public String getOriginalFilename() {
-            return originalFilename;
-        }
-
-        @Override
-        public String getContentType() {
-            return contentType;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return bytes == null || bytes.length == 0;
-        }
-
-        @Override
-        public long getSize() {
-            return bytes.length;
-        }
-
-        @Override
-        public byte[] getBytes() throws IOException {
-            return bytes;
-        }
-
-        @Override
-        public java.io.InputStream getInputStream() throws IOException {
-            return new java.io.ByteArrayInputStream(bytes);
-        }
-
-        @Override
-        public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
-            throw new UnsupportedOperationException("Not implemented");
-        }
+        @Override public String getName() { return name; }
+        @Override public String getOriginalFilename() { return originalFilename; }
+        @Override public String getContentType() { return contentType; }
+        @Override public boolean isEmpty() { return bytes == null || bytes.length == 0; }
+        @Override public long getSize() { return bytes.length; }
+        @Override public byte[] getBytes() { return bytes; }
+        @Override public java.io.InputStream getInputStream() { return new ByteArrayInputStream(bytes); }
+        @Override public void transferTo(java.io.File dest) { throw new UnsupportedOperationException("Not implemented"); }
     }
 }
