@@ -30,7 +30,7 @@ public class S3Facade implements ImageUtil {
         try {
             PutObjectRequest request = new PutObjectRequest(
                     bucketName, fileName, image.getInputStream(), getObjectMetadata(image)
-            ).withCannedAcl(CannedAccessControlList.PublicRead);
+            );
 
             amazonS3.putObject(request);
         } catch (Exception e) {

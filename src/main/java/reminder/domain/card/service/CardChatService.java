@@ -14,7 +14,10 @@ import reminder.domain.card.controller.dto.CardChatResponse;
 import reminder.domain.card.domain.Card;
 import reminder.domain.card.domain.repository.CardRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class CardChatService {
 
@@ -46,7 +49,6 @@ public class CardChatService {
                 entity,
                 String.class
         );
-
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             return new CardChatResponse(response.getBody());
         } else {

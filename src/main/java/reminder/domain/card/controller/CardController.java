@@ -22,7 +22,7 @@ import java.util.List;
 @Tag(name = "Card")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/cards")
+@RequestMapping("/card")
 public class CardController {
 
     private final CreateCardService createCardService;
@@ -50,7 +50,6 @@ public class CardController {
 
     @Operation(summary = "카드 내용 수정")
     @PatchMapping("/{cardId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateCardContent(@PathVariable Long cardId, @RequestBody CardUpdateRequest request) {
         cardService.updateCardContent(cardId, request);
     }

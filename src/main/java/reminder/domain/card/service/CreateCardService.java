@@ -25,7 +25,25 @@ import reminder.domain.user.exception.UserNotFoundException;
 import reminder.domain.user.facade.UserFacade;
 
 
+import reminder.domain.museum.domain.repository.MuseumRepository;
+import reminder.domain.museum.domain.Museum;
+
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpEntity;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class CreateCardService {
 
@@ -33,45 +51,66 @@ public class CreateCardService {
     private final S3Facade s3Facade;
     private final UserFacade userFacade;
     private final CardOverallService cardOverallService;
+    private final MuseumRepository museumRepository;
 
-    @Qualifier("geminiRestTemplate")
     private final RestTemplate restTemplate;
 
-    @Value("${gemini.api.key}")
-    private String geminiApiKey;
+    @Value("${google.search.api-key}")
+    private String googleSearchApiKey;
+
+    @Value("${google.search.cx}")
+    private String googleSearchCx;
+
+    
 
     public Card createCard(CardCreateRequest request) {
         User user = userFacade.getCurrentUser();
+        Museum museum = museumRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("Museum not found for current user."));
 
-        // 1. Call Gemini API to generate image
+        // 1. Use Google Custom Search API to find an image
         String imageUrl = "";
         try {
-            String prompt = "Generate an image related to: " + request.getTitle();
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            String searchQuery = request.getTitle() + " image";
+            String googleSearchUrl = String.format("https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s&searchType=image&num=1",
+                    googleSearchApiKey, googleSearchCx, searchQuery);
 
-            String requestBody = "{\"contents\":[{\"parts\":[{\"text\":\"" + prompt + "\"}], \"role\":\"user\"}], \"generationConfig\":{\"responseMimeType\":\"image/jpeg\"}}";
+            log.info("Calling Google Custom Search API: {}", googleSearchUrl);
+            ResponseEntity<String> searchResponse = restTemplate.getForEntity(googleSearchUrl, String.class);
 
-            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+            if (searchResponse.getStatusCode().is2xxSuccessful() && searchResponse.getBody() != null) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode root = objectMapper.readTree(searchResponse.getBody());
+                JsonNode items = root.path("items");
 
-            ResponseEntity<byte[]> response = restTemplate.exchange(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey,
-                    HttpMethod.POST,
-                    entity,
-                    byte[].class
-            );
+                if (items.isArray() && items.size() > 0) {
+                    String foundImageUrl = items.get(0).path("link").asText();
+                    log.info("Found image URL from Google Search: {}", foundImageUrl);
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                byte[] imageBytes = response.getBody();
-                // Convert byte[] to MultipartFile and upload to S3
-                MultipartFile multipartFile = new ByteArrayMultipartFile(imageBytes, "image.jpeg", "image/jpeg");
-                imageUrl = s3Facade.uploadImage(multipartFile);
+                    // Download the image
+                    ResponseEntity<byte[]> imageDownloadResponse = restTemplate.getForEntity(foundImageUrl, byte[].class);
+
+                    if (imageDownloadResponse.getStatusCode().is2xxSuccessful() && imageDownloadResponse.getBody() != null) {
+                        byte[] imageBytes = imageDownloadResponse.getBody();
+                        log.info("Image downloaded successfully. Size: {} bytes", imageBytes.length);
+                        MultipartFile multipartFile = new ByteArrayMultipartFile(imageBytes, "image.jpeg", "image/jpeg");
+                        imageUrl = s3Facade.uploadImage(multipartFile);
+                        log.info("Image uploaded to S3. URL: {}", imageUrl);
+                    } else {
+                        log.warn("Failed to download image from {}. Status: {}", foundImageUrl, imageDownloadResponse.getStatusCode());
+                        imageUrl = "default_image_url_if_download_fails";
+                    }
+                } else {
+                    log.warn("No image found for query: {}", searchQuery);
+                    imageUrl = "default_image_url_if_no_image_found";
+                }
             } else {
-                // Handle error or use a default image
-                imageUrl = "default_image_url_if_gemini_fails";
+                log.warn("Google Custom Search API call failed. Status: {}, Body is null: {}", searchResponse.getStatusCode(), searchResponse.getBody() == null);
+                imageUrl = "default_image_url_if_search_fails";
             }
         } catch (Exception e) {
-            imageUrl = "default_image_url_if_gemini_fails"; // Fallback
+            log.error("Error during Google Custom Search API call, image download, or S3 upload: {}", e.getMessage(), e);
+            imageUrl = "default_image_url_if_exception"; // Fallback
         }
 
         Card card = Card.builder()
@@ -80,6 +119,7 @@ public class CreateCardService {
                 .imageUrl(imageUrl)
                 .category(request.getCategory())
                 .user(user)
+                .museum(museum)
                 .build();
 
         return cardRepository.save(card);
