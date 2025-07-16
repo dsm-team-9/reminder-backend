@@ -43,3 +43,8 @@ aws:
 server:
   servlet:
     context-path: /reminder
+
+google:
+  search:
+    api-key: ${GOOGLE_SEARCH_API_KEY}
+    cx: ${GOOGLE_SEARCH_CX}
