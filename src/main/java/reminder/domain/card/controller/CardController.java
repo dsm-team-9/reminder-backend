@@ -22,7 +22,7 @@ import java.util.List;
 @Tag(name = "Card")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/cards")
+@RequestMapping("/cards")
 public class CardController {
 
     private final CreateCardService createCardService;

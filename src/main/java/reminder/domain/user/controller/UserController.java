@@ -18,6 +18,7 @@ import reminder.domain.user.entity.User;
 import reminder.domain.user.service.FriendshipService;
 import reminder.domain.user.service.UserLoginService;
 import reminder.domain.user.service.UserSignupService;
+import reminder.global.security.jwt.TokenResponse;
 import reminder.global.security.principle.AuthDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
@@ -25,7 +26,7 @@ import java.util.List;
 
 @Tag(name = "User")
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class UserController {
     private final UserSignupService userSignupService;
@@ -41,8 +42,8 @@ public class UserController {
 
     @Operation(summary = "로그인")
     @PostMapping("/login")
-    public void userLogin(@RequestBody UserLoginRequest userLoginRequest) {
-        userLoginService.execute(userLoginRequest);
+    public TokenResponse userLogin(@RequestBody UserLoginRequest userLoginRequest) {
+        return userLoginService.execute(userLoginRequest);
     }
 
     @Operation(summary = "이름으로 사용자 검색")
@@ -53,7 +54,6 @@ public class UserController {
 
     @Operation(summary = "팔로우")
     @PostMapping("/{id}/follow")
-    @ResponseStatus(HttpStatus.CREATED)
     public void followUser(@PathVariable("id") Long followingId) {
         friendshipService.followUser(followingId);
     }

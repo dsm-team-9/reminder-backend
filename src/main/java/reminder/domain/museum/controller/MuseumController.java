@@ -22,7 +22,7 @@ import reminder.domain.card.domain.Card;
 @Tag(name = "Museum")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/museums")
+@RequestMapping("/museums")
 public class MuseumController {
 
     private final MuseumService museumService;
