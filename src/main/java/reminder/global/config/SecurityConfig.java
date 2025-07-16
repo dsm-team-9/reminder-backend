@@ -10,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsUtils;
 import reminder.global.security.jwt.JwtAuthenticationFilter;
 import reminder.global.security.jwt.JwtProvider;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -26,8 +27,11 @@ public class SecurityConfig {
         http
                 .formLogin(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(CorsUtils::isCorsRequest)
+                        .permitAll()
                         .requestMatchers(
                                 "/auth/signup",
                                 "/auth/login",
