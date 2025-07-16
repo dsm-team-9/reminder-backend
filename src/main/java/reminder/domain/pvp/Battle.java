@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import reminder.domain.user.entity.User;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -30,6 +31,9 @@ public class Battle {
     @Enumerated(EnumType.STRING)
     private BattleStatus status;
 
+    @OneToMany(mappedBy = "battle", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RoundResult> roundResults = new ArrayList<>();
+
     @ElementCollection
     @CollectionTable(name = "initiator_selected_cards", joinColumns = @JoinColumn(name = "battle_id"))
     @Column(name = "card_id")
@@ -44,13 +48,8 @@ public class Battle {
     private int initiatorScore;
     private int opponentScore;
 
-    public void selectInitiatorCards(List<Long> cardIds) {
-        this.initiatorSelectedCardIds = cardIds;
-        this.status = BattleStatus.IN_PROGRESS;
-    }
-
-    public void selectOpponentCards(List<Long> cardIds) {
-        this.opponentSelectedCardIds = cardIds;
+    public void addRoundResult(RoundResult roundResult) {
+        roundResults.add(roundResult);
     }
 
     public void incrementRound() {

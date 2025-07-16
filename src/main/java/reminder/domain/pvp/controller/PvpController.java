@@ -3,17 +3,17 @@ package reminder.domain.pvp.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reminder.domain.pvp.controller.dto.BattleResponse;
+import reminder.domain.pvp.controller.dto.CardPvpResultResponse;
 import reminder.domain.pvp.service.PvpService;
-import reminder.global.security.principle.AuthDetails;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import reminder.domain.pvp.controller.dto.PvpCardSelectionRequest;
 
 import java.util.List;
+
+
+import reminder.domain.pvp.controller.dto.GameResultResponse;
 
 @Tag(name = "PVP")
 @RestController
@@ -26,7 +26,7 @@ public class PvpController {
     @Operation(summary = "PVP 카드 선택")
     @PostMapping("/cards")
     public void selectPvpCards(@RequestBody PvpCardSelectionRequest request) {
-        pvpService.updatePvpStatus(request.getCardIds(), true);
+        pvpService.updatePvpStatus(request, true);
     }
 
     @Operation(summary = "PVP 활성화 여부 확인")
@@ -47,21 +47,15 @@ public class PvpController {
         return pvpService.initiateBattle(opponentUserId);
     }
 
-    @Operation(summary = "카드 선택")
-    @PostMapping("/{battleId}/select-cards")
-    public BattleResponse selectCardsForBattle(@PathVariable Long battleId, @RequestBody List<Long> cardIds) {
-        return pvpService.selectCardsForBattle(battleId, cardIds);
-    }
-
     @Operation(summary = "라운드 진행")
     @PostMapping("/{battleId}/play-round")
     public BattleResponse playRound(@PathVariable Long battleId, @RequestBody Long userSelectedCardId) {
         return pvpService.playRound(battleId, userSelectedCardId);
     }
 
-    @Operation(summary = "대결 결과 조회")
-    @GetMapping("/{battleId}/result")
-    public BattleResponse getBattleResult(@PathVariable Long battleId) {
-        return pvpService.getBattleResult(battleId);
+    @Operation(summary = "최근 대결 결과 조회")
+    @GetMapping("/battles/latest/result")
+    public GameResultResponse getLatestGameResult() {
+        return pvpService.getLatestGameResult();
     }
 }

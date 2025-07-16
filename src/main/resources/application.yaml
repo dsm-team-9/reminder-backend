@@ -23,9 +23,9 @@ spring:
   cache:
     type: simple
 
-  jackson:
-    mapper:
-      accept-case-insensitive-properties: true
+#  jackson:
+#    mapper:
+#      accept-case-insensitive-properties: true
 
 jwt:
   key: ${JWT_SECRET_KEY:rkGU45258GGhiolLO2465TFY5345kGU45258GGhiolLO2465TFY5345}

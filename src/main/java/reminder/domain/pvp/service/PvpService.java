@@ -6,6 +6,8 @@ import org.springframework.transaction.annotation.Transactional;
 import reminder.domain.card.domain.Card;
 import reminder.domain.card.domain.repository.CardRepository;
 import reminder.domain.card.service.CardOverallService;
+import reminder.domain.pvp.controller.dto.CardPvpResultResponse;
+import reminder.domain.pvp.controller.dto.PvpCardSelectionRequest;
 import reminder.domain.user.entity.User;
 import reminder.domain.user.entity.repository.UserRepository;
 import reminder.domain.user.exception.UserNotFoundException;
@@ -15,10 +17,15 @@ import reminder.domain.pvp.BattleStatus;
 import reminder.domain.pvp.repository.BattleRepository;
 import reminder.domain.pvp.controller.dto.BattleResponse;
 
+import reminder.domain.pvp.RoundResult;
+import reminder.domain.pvp.repository.RoundResultRepository;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
+
+import reminder.domain.pvp.controller.dto.GameResultResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +35,7 @@ public class PvpService {
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
     private final BattleRepository battleRepository;
+    private final RoundResultRepository roundResultRepository;
     private final CardOverallService cardOverallService;
     private final UserFacade userFacade;
 
@@ -41,21 +49,21 @@ public class PvpService {
     }
 
     @Transactional
-    public void updatePvpStatus(List<Long> cardIds, boolean enabled) {
+    public void updatePvpStatus(PvpCardSelectionRequest request, boolean enabled) {
         User user = userFacade.getCurrentUser();
 
         if (enabled) {
-            if (cardIds.size() != MIN_CARDS_FOR_PVP) {
+            if (request.getCardIds().size() != MIN_CARDS_FOR_PVP) {
                 throw new IllegalStateException("You must select exactly " + MIN_CARDS_FOR_PVP + " cards to enable PVP.");
             }
-
             List<Card> userCards = cardRepository.findByUser(user);
             userCards.forEach(card -> card.updateIsPvpCard(false));
 
-            List<Card> selectedCards = cardRepository.findAllById(cardIds);
-            if (selectedCards.size() != MIN_CARDS_FOR_PVP || !userCards.containsAll(selectedCards)) {
+            List<Card> selectedCards = cardRepository.findAllById(request.getCardIds());
+            if (selectedCards.size() != MIN_CARDS_FOR_PVP ) {
                 throw new IllegalStateException("Invalid card selection.");
             }
+            System.out.println("asfjgasfkhjlglaksfhj");
 
             selectedCards.forEach(card -> card.updateIsPvpCard(true));
         }
@@ -96,55 +104,35 @@ public class PvpService {
         User opponentUser = userRepository.findById(opponentUserId)
                 .orElseThrow(() -> UserNotFoundException.EXCEPTION);
 
-        Battle battle = Battle.builder()
-                .initiatorUser(initiatorUser)
-                .opponentUser(opponentUser)
-                .status(BattleStatus.PENDING_SELECTION)
-                .currentRound(0)
-                .initiatorScore(0)
-                .opponentScore(0)
-                .build();
-        battleRepository.save(battle);
-        return new BattleResponse(battle);
-    }
+        // Automatically select cards for the battle
+        List<Card> initiatorPvpCards = cardRepository.findByUserAndIsPvpCard(initiatorUser, true);
+        List<Long> initiatorCardIds = initiatorPvpCards.stream().map(Card::getId).collect(Collectors.toList());
 
-    @Transactional
-    public BattleResponse selectCardsForBattle(Long battleId, List<Long> cardIds) {
-        Battle battle = battleRepository.findById(battleId)
-                .orElseThrow(() -> new IllegalArgumentException("Battle not found."));
-
-        if (cardIds.size() != CARDS_PER_BATTLE) {
-            throw new IllegalArgumentException("You must select exactly " + CARDS_PER_BATTLE + " cards.");
-        }
-
-        User user = userFacade.getCurrentUser();
-
-        // Verify cards belong to the user and are valid
-        List<Card> userCards = cardRepository.findByUser(user);
-        if (!userCards.stream().map(Card::getId).collect(Collectors.toSet()).containsAll(cardIds)) {
-            throw new IllegalArgumentException("Selected cards do not belong to you or are invalid.");
-        }
+        List<Card> opponentPvpCards = cardRepository.findByUserAndIsPvpCard(opponentUser, true);
+        List<Long> opponentCardIds = opponentPvpCards.stream().map(Card::getId).collect(Collectors.toList());
 
         // Calculate and set overall for selected cards
-        for (Long cardId : cardIds) {
-            Card card = cardRepository.findById(cardId)
-                    .orElseThrow(() -> new IllegalArgumentException("Card not found."));
+        for (Card card : initiatorPvpCards) {
+            int overall = cardOverallService.calculateOverall(card.getContent());
+            card.setOverall(overall);
+            cardRepository.save(card);
+        }
+        for (Card card : opponentPvpCards) {
             int overall = cardOverallService.calculateOverall(card.getContent());
             card.setOverall(overall);
             cardRepository.save(card);
         }
 
-        if (battle.getInitiatorUser().equals(user)) {
-            battle.selectInitiatorCards(cardIds);
-
-            // Opponent (AI) selects cards from their pvp cards
-            List<Card> opponentPvpCards = cardRepository.findByUserAndIsPvpCard(battle.getOpponentUser(), true);
-            List<Long> opponentCardIds = opponentPvpCards.stream().map(Card::getId).collect(Collectors.toList());
-            battle.selectOpponentCards(opponentCardIds);
-
-        } else {
-            throw new IllegalArgumentException("User is not part of this battle.");
-        }
+        Battle battle = Battle.builder()
+                .initiatorUser(initiatorUser)
+                .opponentUser(opponentUser)
+                .status(BattleStatus.IN_PROGRESS) // Start immediately
+                .currentRound(0)
+                .initiatorScore(0)
+                .opponentScore(0)
+                .initiatorSelectedCardIds(initiatorCardIds)
+                .opponentSelectedCardIds(opponentCardIds)
+                .build();
 
         battleRepository.save(battle);
         return new BattleResponse(battle);
@@ -180,6 +168,16 @@ public class PvpService {
         battle.updateScore(initiatorWinsRound);
         battle.incrementRound();
 
+        RoundResult roundResult = RoundResult.builder()
+                .battle(battle)
+                .roundNumber(battle.getCurrentRound())
+                .userCard(userCard)
+                .opponentCard(aiCard)
+                .userWin(initiatorWinsRound)
+                .build();
+        roundResultRepository.save(roundResult);
+        battle.addRoundResult(roundResult);
+
         if (battle.getCurrentRound() == TOTAL_ROUNDS) {
             battle.completeBattle();
             // Handle battle results (trophy, feedback)
@@ -196,7 +194,7 @@ public class PvpService {
                 cardRepository.save(trophyCard);
             } else if (battle.getInitiatorScore() < battle.getOpponentScore()) {
                 // Initiator loses: provide feedback
-                String feedback = cardOverallService.provideFeedbackForCard(userCard.getContent(), userCard.getOverall());
+                String feedback = cardOverallService.provideFeedbackForCard(userCard.getTitle(), userCard.getContent(), userCard.getOverall());
                 System.out.println("Feedback for losing card: " + feedback);
             }
         }
@@ -204,9 +202,11 @@ public class PvpService {
         return new BattleResponse(battle);
     }
 
-    public BattleResponse getBattleResult(Long battleId) {
-        Battle battle = battleRepository.findById(battleId)
-                .orElseThrow(() -> new IllegalArgumentException("Battle not found."));
-        return new BattleResponse(battle);
+    public GameResultResponse getLatestGameResult() {
+        User user = userFacade.getCurrentUser();
+        Battle latestBattle = battleRepository.findTopByInitiatorUserAndStatusOrderByIdDesc(user, BattleStatus.COMPLETED)
+                .orElseThrow(() -> new IllegalStateException("No completed battles found."));
+
+        return GameResultResponse.of(latestBattle, cardOverallService);
     }
 }

@@ -1,5 +1,6 @@
 package reminder.global.error.handler;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,8 +12,12 @@ import reminder.global.error.ErrorResponseEntity;
 
 import org.springframework.validation.BindException;
 
+@Slf4j
 @RestControllerAdvice
 public class CustomExceptionHandler {
+
+//    @ExceptionHandler(IllegalStateException.class)
+//    protected
 
     @ExceptionHandler(CustomException.class)
     protected ResponseEntity<ErrorResponseEntity> handleCustomException(CustomException customException) {
@@ -31,8 +36,8 @@ public class CustomExceptionHandler {
         return ErrorResponseEntity.responseEntity(ErrorCode.INVALID_INPUT, message);
     }
 
-    @ExceptionHandler(Exception.class)
-    protected ResponseEntity<ErrorResponseEntity> handleUnexpectedException(Exception ex) {
-        return ErrorResponseEntity.responseEntity(ErrorCode.INTERNAL_SERVER_ERROR);
-    }
+//    @ExceptionHandler(Exception.class)
+//    protected ResponseEntity<ErrorResponseEntity> handleUnexpectedException(Exception ex) {
+//        return ErrorResponseEntity.responseEntity(ErrorCode.INTERNAL_SERVER_ERROR);
+//    }
 }
