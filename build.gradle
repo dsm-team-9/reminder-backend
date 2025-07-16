@@ -44,6 +44,9 @@ dependencies {
     testImplementation 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 }
+jar {
+    archiveFileName = 'app.jar'
+}
 
 dependencyManagement {
     imports {

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -64,7 +64,17 @@ public class CreateCardService {
                     String foundImageUrl = items.get(0).path("link").asText();
                     log.info("Found image URL from Google Search: {}", foundImageUrl);
 
-                    ResponseEntity<byte[]> imageDownloadResponse = restTemplate.getForEntity(foundImageUrl, byte[].class);
+                    // Set custom headers (User-Agent required for Wikimedia, etc.)
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.set(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                    ResponseEntity<byte[]> imageDownloadResponse = restTemplate.exchange(
+                            foundImageUrl,
+                            HttpMethod.GET,
+                            entity,
+                            byte[].class
+                    );
 
                     if (imageDownloadResponse.getStatusCode().is2xxSuccessful() && imageDownloadResponse.getBody() != null) {
                         byte[] imageBytes = imageDownloadResponse.getBody();
