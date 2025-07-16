@@ -22,6 +22,7 @@ import java.util.UUID;
 import reminder.domain.user.entity.User;
 import reminder.domain.user.entity.repository.UserRepository;
 import reminder.domain.user.exception.UserNotFoundException;
+import reminder.domain.user.facade.UserFacade;
 
 
 @Service
@@ -30,7 +31,8 @@ public class CreateCardService {
 
     private final CardRepository cardRepository;
     private final S3Facade s3Facade;
-    private final UserRepository userRepository;
+    private final UserFacade userFacade;
+    private final CardOverallService cardOverallService;
 
     @Qualifier("geminiRestTemplate")
     private final RestTemplate restTemplate;
@@ -38,9 +40,8 @@ public class CreateCardService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    public Card createCard(CardCreateRequest request, Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> UserNotFoundException.EXCEPTION);
+    public Card createCard(CardCreateRequest request) {
+        User user = userFacade.getCurrentUser();
 
         // 1. Call Gemini API to generate image
         String imageUrl = "";

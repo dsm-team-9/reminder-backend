@@ -31,7 +31,7 @@ public class CardChatService {
 
         String cardContent = "Title: " + card.getTitle() + ". Content: " + card.getContent();
         String prompt = "Based on the following card content: \"" + cardContent + "\". " +
-                        "Answer the user's question: \"" + userMessage + "\"";
+                        "Answer the user's question in Korean: \"" + userMessage + "\"";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

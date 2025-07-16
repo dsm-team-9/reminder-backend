@@ -22,6 +22,11 @@ public class User {
     private String name;
     private String phoneNumber;
     private String password;
+    private boolean pvpEnabled = true;
     @OneToMany(mappedBy = "user")
     private List<Card> feeds = new ArrayList<>();
+
+    public void updatePvpEnabled(boolean enabled) {
+        this.pvpEnabled = enabled;
+    }
 }

@@ -10,6 +10,8 @@ import reminder.domain.user.entity.repository.FriendshipRepository;
 import reminder.domain.user.facade.UserFacade;
 import reminder.domain.user.entity.repository.UserRepository;
 import reminder.domain.user.exception.UserNotFoundException;
+import reminder.domain.user.controller.dto.UserWithCardCountResponse;
+import reminder.domain.card.domain.repository.CardRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +25,7 @@ public class FriendshipService {
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
     private final UserFacade userFacade;
+    private final CardRepository cardRepository;
 
     public List<UserResponse> searchUsersByName(String name) {
         return userRepository.findByNameContaining(name).stream()
@@ -67,14 +70,34 @@ public class FriendshipService {
         friendshipRepository.delete(friendship);
     }
 
-    public List<UserResponse> getFollowing() {
+    public List<UserWithCardCountResponse> getFollowing() {
         User user = userFacade.getCurrentUser();
         return friendshipRepository.findByFollower(user).stream()
-                .map(friendship -> UserResponse.builder()
-                        .id(friendship.getFollowing().getId())
-                        .name(friendship.getFollowing().getName())
-                        .phoneNumber(friendship.getFollowing().getPhoneNumber())
-                        .build())
+                .map(friendship -> {
+                    User followedUser = friendship.getFollowing();
+                    long cardCount = cardRepository.countByUser(followedUser);
+                    return UserWithCardCountResponse.builder()
+                            .id(followedUser.getId())
+                            .name(followedUser.getName())
+                            .phoneNumber(followedUser.getPhoneNumber())
+                            .cardCount(cardCount)
+                            .build();
+                })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public boolean updatePvpStatus(boolean enabled) {
+        User user = userFacade.getCurrentUser();
+
+        if (enabled) {
+            long cardCount = cardRepository.countByUser(user);
+            if (cardCount < 5) {
+                throw new IllegalStateException("PVP cannot be enabled. You need at least 5 cards.");
+            }
+        }
+        user.updatePvpEnabled(enabled);
+        userRepository.save(user);
+        return user.isPvpEnabled();
     }
 }

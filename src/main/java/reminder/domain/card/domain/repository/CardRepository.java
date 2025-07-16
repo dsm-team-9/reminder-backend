@@ -14,4 +14,7 @@ public interface CardRepository extends JpaRepository<Card, Long> {
     List<Card> findByMuseum(Museum museum);
     List<Card> findByUserAndCategory(User user, CardCategory category);
     List<Card> findByMuseumAndCategory(Museum museum, CardCategory category);
+    long countByUser(User user);
+    long countByUserAndIsPvpCard(User user, boolean isPvpCard);
+    List<Card> findByUserAndIsPvpCard(User user, boolean isPvpCard);
 }

@@ -21,6 +21,7 @@ public class Card {
     private String title;
     private String content;
     private String imageUrl;
+    private int overall = 0;
     @Enumerated(EnumType.STRING)
     private CardCategory category;
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,4 +31,17 @@ public class Card {
     @JoinColumn(name = "museum_id")
     private Museum museum;
 
+    private boolean isPvpCard = false;
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
+    public void setOverall(int overall) {
+        this.overall = overall;
+    }
+
+    public void updateIsPvpCard(boolean isPvpCard) {
+        this.isPvpCard = isPvpCard;
+    }
 }

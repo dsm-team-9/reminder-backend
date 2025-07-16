@@ -10,8 +10,14 @@ import reminder.domain.museum.controller.dto.MuseumResponse;
 import reminder.domain.museum.domain.Museum;
 import reminder.domain.museum.domain.repository.MuseumRepository;
 import reminder.domain.user.entity.User;
+import reminder.domain.user.entity.repository.FriendshipRepository;
 import reminder.domain.user.entity.repository.UserRepository;
 import reminder.domain.user.exception.UserNotFoundException;
+
+import reminder.domain.user.facade.UserFacade;
+import reminder.domain.user.entity.Friendship;
+import reminder.domain.museum.controller.dto.FollowingMuseumResponse;
+import java.util.stream.Collectors;
 
 import java.util.List;
 
@@ -23,17 +29,29 @@ public class MuseumService {
     private final MuseumRepository museumRepository;
     private final UserRepository userRepository;
     private final CardRepository cardRepository;
+    private final UserFacade userFacade;
+    private final FriendshipRepository friendshipRepository;
 
-    public MuseumResponse getMuseumByUserId(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> UserNotFoundException.EXCEPTION);
-        Museum museum = museumRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalArgumentException("Museum not found for this user."));
-        return MuseumResponse.builder()
-                .id(museum.getId())
-                .userId(museum.getUser().getId())
-                .bannerUrl(museum.getBannerUrl())
-                .build();
+    
+
+    public List<FollowingMuseumResponse> getFollowingMuseums() {
+        User currentUser = userFacade.getCurrentUser();
+        List<Friendship> followings = friendshipRepository.findByFollower(currentUser);
+
+        return followings.stream()
+                .map(Friendship::getFollowing)
+                .map(followingUser -> {
+                    Museum museum = museumRepository.findByUser(followingUser)
+                            .orElseThrow(() -> new IllegalArgumentException("Museum not found for user: " + followingUser.getId()));
+                    long cardCount = cardRepository.countByUser(followingUser);
+                    return FollowingMuseumResponse.builder()
+                            .userId(followingUser.getId())
+                            .username(followingUser.getName())
+                            .bannerUrl(museum.getBannerUrl())
+                            .cardCount(cardCount)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     public List<Card> getCardsInMuseum(Long museumId, CardCategory category) {
@@ -44,5 +62,13 @@ public class MuseumService {
         } else {
             return cardRepository.findByMuseum(museum);
         }
+    }
+
+    public List<Card> getCardsInUserMuseum(Long userId, CardCategory category) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> UserNotFoundException.EXCEPTION);
+        Museum museum = museumRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("Museum not found for this user."));
+        return getCardsInMuseum(museum.getId(), category);
     }
 }

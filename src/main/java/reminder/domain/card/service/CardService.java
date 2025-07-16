@@ -3,6 +3,7 @@ package reminder.domain.card.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reminder.domain.card.controller.dto.CardResponse;
+import reminder.domain.card.controller.dto.CardUpdateRequest;
 import reminder.domain.card.domain.Card;
 import reminder.domain.card.domain.CardCategory;
 import reminder.domain.card.domain.repository.CardRepository;
@@ -38,5 +39,18 @@ public class CardService {
                         .museumId(card.getMuseum() != null ? card.getMuseum().getId() : null)
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    public void updateCardContent(Long cardId, CardUpdateRequest request) {
+        User currentUser = userFacade.getCurrentUser();
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new IllegalArgumentException("Card not found."));
+
+        if (!card.getUser().equals(currentUser)) {
+            throw new IllegalArgumentException("You are not the owner of this card.");
+        }
+
+        card.updateContent(request.getContent());
+        cardRepository.save(card);
     }
 }

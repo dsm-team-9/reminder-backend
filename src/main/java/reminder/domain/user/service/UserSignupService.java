@@ -10,6 +10,8 @@ import reminder.domain.user.entity.repository.UserRepository;
 import reminder.domain.user.entity.User;
 import reminder.domain.user.exception.NicknameAlreadyExistsException;
 import reminder.domain.user.exception.PhoneNumberAlreadyExistsException;
+import reminder.domain.museum.domain.Museum;
+import reminder.domain.museum.domain.repository.MuseumRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +19,7 @@ import reminder.domain.user.exception.PhoneNumberAlreadyExistsException;
 public class UserSignupService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MuseumRepository museumRepository;
 
     public void execute(UserSignupRequest request) {
         if (userRepository.existsByPhoneNumber(request.phoneNumber())) {
@@ -33,5 +36,10 @@ public class UserSignupService {
                 .build();
 
         userRepository.save(user);
+
+        Museum museum = Museum.builder()
+                .user(user)
+                .build();
+        museumRepository.save(museum);
     }
 }

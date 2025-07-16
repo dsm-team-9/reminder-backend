@@ -13,15 +13,17 @@ import org.springframework.web.bind.annotation.*;
 import reminder.domain.user.controller.dto.UserLoginRequest;
 import reminder.domain.user.controller.dto.UserSignupRequest;
 import reminder.domain.user.controller.dto.UserResponse;
+import reminder.domain.user.controller.dto.UserWithCardCountResponse;
 import reminder.domain.user.entity.User;
 import reminder.domain.user.service.FriendshipService;
 import reminder.domain.user.service.UserLoginService;
 import reminder.domain.user.service.UserSignupService;
-import reminder.global.security.jwt.TokenResponse;
+import reminder.global.security.principle.AuthDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
-@Tag(name = "user")
+@Tag(name = "User")
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -39,8 +41,8 @@ public class UserController {
 
     @Operation(summary = "로그인")
     @PostMapping("/login")
-    public TokenResponse userLogin(@RequestBody UserLoginRequest userLoginRequest) {
-        return userLoginService.execute(userLoginRequest);
+    public void userLogin(@RequestBody UserLoginRequest userLoginRequest) {
+        userLoginService.execute(userLoginRequest);
     }
 
     @Operation(summary = "이름으로 사용자 검색")
@@ -65,7 +67,13 @@ public class UserController {
 
     @Operation(summary = "팔로잉 목록 조회")
     @GetMapping("/following")
-    public List<UserResponse> getFollowing() {
+    public List<UserWithCardCountResponse> getFollowing() {
         return friendshipService.getFollowing();
+    }
+
+    @Operation(summary = "PVP 활성화/비활성화 설정")
+    @PatchMapping("/pvp-status")
+    public boolean updatePvpStatus(@RequestParam boolean enabled) {
+        return friendshipService.updatePvpStatus(enabled);
     }
 }
