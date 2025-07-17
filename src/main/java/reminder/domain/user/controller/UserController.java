@@ -15,6 +15,7 @@ import reminder.domain.user.controller.dto.UserSignupRequest;
 import reminder.domain.user.controller.dto.UserResponse;
 import reminder.domain.user.controller.dto.UserWithCardCountResponse;
 import reminder.domain.user.entity.User;
+import reminder.domain.user.facade.UserFacade;
 import reminder.domain.user.service.FriendshipService;
 import reminder.domain.user.service.UserLoginService;
 import reminder.domain.user.service.UserSignupService;
@@ -32,6 +33,7 @@ public class UserController {
     private final UserSignupService userSignupService;
     private final UserLoginService userLoginService;
     private final FriendshipService friendshipService;
+    private final UserFacade userFacade;
 
     @Operation(summary = "회원가입")
     @PostMapping("/signup")
@@ -48,7 +50,7 @@ public class UserController {
 
     @Operation(summary = "이름으로 사용자 검색")
     @GetMapping("/search")
-    public List<UserResponse> searchUsersByName(@RequestParam String name) {
+    public List<UserWithCardCountResponse> searchUsersByName(@RequestParam String name) {
         return friendshipService.searchUsersByName(name);
     }
 
@@ -75,5 +77,11 @@ public class UserController {
     @PatchMapping("/pvp-status")
     public boolean updatePvpStatus(@RequestParam boolean enabled) {
         return friendshipService.updatePvpStatus(enabled);
+    }
+
+    @Operation(summary = "내 이름 조회")
+    @GetMapping("/my-name")
+    public String myName() {
+        return userFacade.getCurrentUser().getName();
     }
 }

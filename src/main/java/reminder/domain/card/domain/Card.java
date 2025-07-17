@@ -20,6 +20,7 @@ public class Card {
     private Long id;
     private String title;
     private String content;
+    private String introduction;
     private String imageUrl;
     private int overall = 0;
     @Enumerated(EnumType.STRING)

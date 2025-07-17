@@ -27,13 +27,17 @@ public class FriendshipService {
     private final UserFacade userFacade;
     private final CardRepository cardRepository;
 
-    public List<UserResponse> searchUsersByName(String name) {
+    public List<UserWithCardCountResponse> searchUsersByName(String name) {
         return userRepository.findByNameContaining(name).stream()
-                .map(user -> UserResponse.builder()
-                        .id(user.getId())
-                        .name(user.getName())
-                        .phoneNumber(user.getPhoneNumber())
-                        .build())
+                .map(user -> {
+                    long cardCount = cardRepository.countByUser(user);
+                    return UserWithCardCountResponse.builder()
+                            .id(user.getId())
+                            .name(user.getName())
+                            .phoneNumber(user.getPhoneNumber())
+                            .cardCount(cardCount)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 

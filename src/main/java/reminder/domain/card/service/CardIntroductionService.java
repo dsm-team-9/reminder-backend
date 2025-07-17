@@ -24,7 +24,7 @@ import java.util.Map;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class CardChatService {
+public class CardIntroductionService {
 
     private final CardRepository cardRepository;
     private final RestTemplate restTemplate;
@@ -33,19 +33,17 @@ public class CardChatService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    public CardChatResponse chatWithCard(Long cardId, String message) {
+    public CardChatResponse getCardIntroduction(Long cardId) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("Card not found."));
 
-        String cardContent = "Title: " + card.getTitle() + ". Content: " + card.getContent();
-        String prompt = "너는 지금부터 \'" + card.getTitle() + "\'의 역할을 맡는다.\n" +
-                        card.getTitle() + "이 실제로 말하듯, 해당 인물의 말투, 가치관, 시대적 배경을 반영하여 사용자 질문에 답하라.\n" +
-                        "답변은 한국어로 하되, 품격 있고 진중한 어조를 유지하고, 가벼운 농담은 피한다.\n\n" +
-                        "다음은 카드의 정보다:\n" +
-                        cardContent + "\n" +
-                        "이 내용을 바탕으로 사용자 질문에 대답하라. 사용자의 질문:  " + message;
-
-        return callGeminiApi(prompt);
+        String introductionPrompt = "너는 지금부터 '" + card.getTitle() + "'의 역할을 맡는다.\n" +
+                                  card.getTitle() + "이 실제로 말하듯, 해당 인물의 말투, 가치관, 시대적 배경을 반영하여 자신을 소개하라. 답변은 최대 두 줄로 제한한다.\n" +
+                                  "답변은 한국어로 하되, 품격 있고 진중한 어조를 유지하고, 가벼운 농담은 피한다.\n\n" +
+                                  "다음은 카드의 정보다:\n" +
+                                  "Title: " + card.getTitle() + ". Content: " + card.getContent() + ". Introduction: " + card.getIntroduction() + "\n" +
+                                  "이 내용을 바탕으로 자신을 소개하라.";
+        return callGeminiApi(introductionPrompt);
     }
 
     private CardChatResponse callGeminiApi(String prompt) {

@@ -13,6 +13,7 @@ import reminder.domain.card.controller.dto.CardUpdateRequest;
 import reminder.domain.card.service.CreateCardService;
 import reminder.domain.card.service.CardService;
 import reminder.domain.card.service.CardChatService;
+import reminder.domain.card.service.CardIntroductionService;
 import reminder.domain.card.domain.CardCategory;
 import reminder.global.security.principle.AuthDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +29,7 @@ public class CardController {
     private final CreateCardService createCardService;
     private final CardService cardService;
     private final CardChatService cardChatService;
+    private final CardIntroductionService cardIntroductionService;
 
     @Operation(summary = "카드 생성")
     @PostMapping
@@ -52,5 +54,11 @@ public class CardController {
     @PatchMapping("/{cardId}")
     public void updateCardContent(@PathVariable Long cardId, @RequestBody CardUpdateRequest request) {
         cardService.updateCardContent(cardId, request);
+    }
+
+    @Operation(summary = "카드 자기소개")
+    @GetMapping("/{cardId}/introduction")
+    public CardChatResponse getCardIntroduction(@PathVariable Long cardId) {
+        return cardIntroductionService.getCardIntroduction(cardId);
     }
 }
